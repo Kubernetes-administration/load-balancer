@@ -30,5 +30,5 @@ variable "disable_health_check" {
 variable "service_port" {
   type        = number
   description = "TCP port your service is listening on."
-  default = 80
+  default     = 80
 }
