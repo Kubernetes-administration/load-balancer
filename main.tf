@@ -30,20 +30,9 @@ resource "google_compute_router_nat" "main" {
   udp_idle_timeout_sec                = 30
 }
 
-resource "random_string" "name_suffix" {
-  length      = 6
-  lower       = true
-  min_lower   = 0
-  min_numeric = 0
-  min_special = 0
-  min_upper   = 0
-  numeric = true
-  special = false
-  upper   = false
-}
 
 data "template_file" "instance_startup_script" {
-  template = file("${path.module}/templates/gceme.sh.tpl")
+  template = file("${path.module}/templates/hello.sh.tpl")
 
   vars = {
     PROXY_PATH = ""
