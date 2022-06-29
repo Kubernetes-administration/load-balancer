@@ -101,37 +101,76 @@ resource "google_compute_firewall" "default-lb-fw" {
   }
 }
 
-resource "google_compute_forwarding_rule" "default" {
-  project               = "gcp-terraform-env"
+resource "google_compute_global_forwarding_rule" "default" {
+  name    = "l7-xlb-forwarding-rule"
+  project = "gcp-terraform-env"
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
-  name                  = "basic-load-balancer-default"
   port_range            = "80"
-  region                = "us-central1"
-  target                = google_compute_target_pool.default.self_link
+  target                = google_compute_target_http_proxy.default.id
 }
 
-resource "google_compute_target_pool" "default" {
-  project          = "gcp-terraform-env"
-  name             = "basic-load-balancer-default"
-  region           = "us-central1"
-  session_affinity = "NONE"
-  instances        = [google_compute_instance.default.self_link]
-
-  health_checks = var.disable_health_check ? [] : [google_compute_http_health_check.default.0.self_link]
-}
-
-resource "google_compute_http_health_check" "default" {
-  count   = var.disable_health_check ? 0 : 1
+resource "google_compute_target_http_proxy" "default" {
+  name    = "l7-xlb-target-http-proxy"
   project = "gcp-terraform-env"
-  name    = "basic-load-balancer-default-hc"
+  url_map = google_compute_url_map.default.id
+}
 
-  check_interval_sec  = var.health_check["check_interval_sec"]
-  healthy_threshold   = var.health_check["healthy_threshold"]
-  timeout_sec         = var.health_check["timeout_sec"]
-  unhealthy_threshold = var.health_check["unhealthy_threshold"]
+resource "google_compute_url_map" "default" {
+  name    = "l7-xlb-url-map"
+  project = "gcp-terraform-env"
+  default_service = google_compute_backend_service.default.id
+}
 
-  port         = local.health_check_port == null ? var.service_port : local.health_check_port
-  request_path = var.health_check["request_path"]
-  host         = var.health_check["host"]
+resource "google_compute_backend_service" "default" {
+  name = "l7-xlb-backend-service"
+  protocol              = "HTTP"
+  port_name             = "my-port"
+  load_balancing_scheme = "EXTERNAL"
+  timeout_sec           = 10
+  enable_cdn            = true
+  project               = "gcp-terraform-env"
+  health_checks         = [google_compute_health_check.default.id]
+  backend {
+    group           = google_compute_instance_group.default.id
+    balancing_mode  = "UTILIZATION"
+    capacity_scaler = 1.0
+  }
+}
+
+resource "google_compute_instance_group" "default" {
+  name        = "terraform-webservers"
+  description = "Terraform test instance group"
+  zone        = "us-central1-a"
+  project     = "gcp-terraform-env"
+
+  instances = [
+    google_compute_instance.default.id,
+  ]
+
+  named_port {
+    name = "http"
+    port = "80"
+  }
+}
+
+
+resource "google_compute_firewall" "default" {
+  name          = "l7-xlb-fw-allow-hc"
+  project       = "gcp-terraform-env"
+  network       = "default"
+  source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
+  allow {
+    protocol = "tcp"
+  }
+  target_tags = ["allow-health-check"]
+}
+resource "google_compute_health_check" "default" {
+  project            = "gcp-terraform-env"
+  name               = "rbs-health-check"
+  check_interval_sec = 1
+  timeout_sec        = 1
+  http_health_check {
+    port = "80"
+  }
 }
