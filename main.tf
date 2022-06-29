@@ -125,7 +125,7 @@ resource "google_compute_url_map" "default" {
 resource "google_compute_backend_service" "default" {
   name = "l7-xlb-backend-service"
   protocol              = "HTTP"
-  port_name             = "my-port"
+  port_name             = "http"
   load_balancing_scheme = "EXTERNAL"
   timeout_sec           = 10
   enable_cdn            = true
@@ -134,7 +134,7 @@ resource "google_compute_backend_service" "default" {
   backend {
     group           = google_compute_instance_group.default.id
     balancing_mode  = "UTILIZATION"
-    capacity_scaler = 1.0
+    max_rate_per_instance = "80"
   }
 }
 
