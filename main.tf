@@ -135,19 +135,3 @@ resource "google_compute_http_health_check" "default" {
   request_path = var.health_check["request_path"]
   host         = var.health_check["host"]
 }
-
-resource "google_compute_instance_group" "webservers" {
-  name        = "terraform-webservers"
-  description = "Terraform test instance group"
-  zone        = "us-central1-a"
-  project     = "gcp-terraform-env"
-
-  instances = [
-    google_compute_instance.default.id,
-  ]
-
-  named_port {
-    name = "http"
-    port = "80"
-  }
-}
