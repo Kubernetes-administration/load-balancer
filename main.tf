@@ -2,72 +2,31 @@ locals {
   health_check_port = var.health_check["port"]
 }
 
-resource "google_compute_router" "router" {
-  name    = "load-balancer-module-router"
-  network = "default"
-  region  = "us-central1"
-  project = "gcp-terraform-env"
-}
+resource "google_compute_instance_group" "default" {
+  name    = "${var.project}-instance-group"
+  zone    = "${var.region}-a"
+  project = var.project
 
-resource "google_service_account" "instance_group" {
-  account_id = "instance-group"
-  disabled   = false
-  project    = "gcp-terraform-env"
-}
+  instances = [
+    data.google_compute_instance.compute_instance.self_link,
+  ]
 
-resource "google_compute_router_nat" "main" {
-  enable_endpoint_independent_mapping = true
-  icmp_idle_timeout_sec               = 30
-  min_ports_per_vm                    = 64
-  name                                = "load-balancer-module-nat"
-  nat_ip_allocate_option              = "AUTO_ONLY"
-  project                             = "gcp-terraform-env"
-  region                              = "us-central1"
-  router                              = "load-balancer-module-router"
-  source_subnetwork_ip_ranges_to_nat  = "ALL_SUBNETWORKS_ALL_IP_RANGES"
-  tcp_established_idle_timeout_sec    = 1200
-  tcp_transitory_idle_timeout_sec     = 30
-  udp_idle_timeout_sec                = 30
-}
-
-
-data "template_file" "instance_startup_script" {
-  template = file("${path.module}/templates/hello.sh.tpl")
-
-  vars = {
-    PROXY_PATH = ""
+  named_port {
+    name = "http"
+    port = "80"
   }
 }
 
-resource "google_compute_instance" "default" {
-  project                 = "gcp-terraform-env"
-  machine_type            = "n1-standard-1"
-  name                    = "default-instance"
-  zone                    = "us-central1-a"
-  metadata_startup_script = data.template_file.instance_startup_script.rendered
 
-  boot_disk {
-    initialize_params {
-      image = "debian-cloud/debian-9"
-    }
-  }
-
-  network_interface {
-    network = "default"
-
-    access_config {
-    }
-  }
-  service_account {
-    scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
-  }
+data "google_compute_instance" "compute_instance" {
+  project = var.project
+  name    = var.compute_instance
+  zone    = var.zone
 }
 
 resource "google_compute_firewall" "default-hc-fw" {
-  name     = "basic-load-balancer-default-hc"
-  project  = "gcp-terraform-env"
+  name     = "${var.project}-load-balancer"
+  project  = var.project
   network  = "default"
   priority = 1000
   source_ranges = [
@@ -85,8 +44,8 @@ resource "google_compute_firewall" "default-hc-fw" {
 }
 
 resource "google_compute_firewall" "default-lb-fw" {
-  project  = "gcp-terraform-env"
-  name     = "basic-load-balancer-default-vm-service"
+  project  = var.project
+  name     = "${var.project}-load-balancer-vm-service"
   network  = "default"
   priority = 1000
   source_ranges = [
@@ -102,8 +61,8 @@ resource "google_compute_firewall" "default-lb-fw" {
 }
 
 resource "google_compute_global_forwarding_rule" "default" {
-  name    = "l7-xlb-forwarding-rule"
-  project = "gcp-terraform-env"
+  name                  = "${var.project}-forwarding-rule"
+  project               = var.project
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
   port_range            = "80"
@@ -111,53 +70,36 @@ resource "google_compute_global_forwarding_rule" "default" {
 }
 
 resource "google_compute_target_http_proxy" "default" {
-  name    = "l7-xlb-target-http-proxy"
-  project = "gcp-terraform-env"
+  name    = "${var.project}-target-http-proxy"
+  project = var.project
   url_map = google_compute_url_map.default.id
 }
 
 resource "google_compute_url_map" "default" {
-  name    = "l7-xlb-url-map"
-  project = "gcp-terraform-env"
+  name            = "${var.project}-url-map"
+  project         = var.project
   default_service = google_compute_backend_service.default.id
 }
 
 resource "google_compute_backend_service" "default" {
-  name = "l7-xlb-backend-service"
+  name                  = "${var.project}-backend-service"
   protocol              = "HTTP"
   port_name             = "http"
   load_balancing_scheme = "EXTERNAL"
   timeout_sec           = 10
   enable_cdn            = true
-  project               = "gcp-terraform-env"
+  project               = var.project
   health_checks         = [google_compute_health_check.default.id]
   backend {
-    group           = google_compute_instance_group.default.id
-    balancing_mode  = "UTILIZATION"
+    group                 = google_compute_instance_group.default.id
+    balancing_mode        = "UTILIZATION"
     max_rate_per_instance = "80"
   }
 }
 
-resource "google_compute_instance_group" "default" {
-  name        = "terraform-webservers"
-  description = "Terraform test instance group"
-  zone        = "us-central1-a"
-  project     = "gcp-terraform-env"
-
-  instances = [
-    google_compute_instance.default.id,
-  ]
-
-  named_port {
-    name = "http"
-    port = "80"
-  }
-}
-
-
 resource "google_compute_firewall" "default" {
-  name          = "l7-xlb-fw-allow-hc"
-  project       = "gcp-terraform-env"
+  name          = "${var.project}-fw-allow-hc"
+  project       = var.project
   network       = "default"
   source_ranges = ["130.211.0.0/22", "35.191.0.0/16"]
   allow {
@@ -166,8 +108,8 @@ resource "google_compute_firewall" "default" {
   target_tags = ["allow-health-check"]
 }
 resource "google_compute_health_check" "default" {
-  project            = "gcp-terraform-env"
-  name               = "rbs-health-check"
+  project            = var.project
+  name               = "${var.project}-health-check"
   check_interval_sec = 1
   timeout_sec        = 1
   http_health_check {

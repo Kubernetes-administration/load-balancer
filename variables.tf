@@ -32,3 +32,25 @@ variable "service_port" {
   description = "TCP port your service is listening on."
   default     = 80
 }
+
+variable "project" {
+  type        = string
+  description = "The project scope"
+  default     = "gcp-terraform-env"
+}
+
+variable "region" {
+  type        = string
+  description = "The region"
+  default     = "us-central1"
+}
+
+variable "compute_instance" {
+  type        = string
+  description = "compute instance"
+}
+
+variable "zone" {
+  type        = string
+  description = "zone"
+}
