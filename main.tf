@@ -39,31 +39,25 @@ data "template_file" "instance_startup_script" {
   }
 }
 
-resource "google_compute_instance_template" "tpl" {
-  can_ip_forward          = false
-  machine_type            = "n1-standard-1"
-  metadata_startup_script = data.template_file.instance_startup_script.rendered
-  name_prefix             = "default-instance-template-"
+resource "google_compute_instance" "default" {
   project                 = "gcp-terraform-env"
+  machine_type            = "n1-standard-1"
+  name                    = "default-instance"
+  zone                    = "us-central1-a"
+  metadata_startup_script = data.template_file.instance_startup_script.rendered
 
-  disk {
-    auto_delete  = true
-    boot         = true
-    disk_size_gb = 100
-    disk_type    = "pd-standard"
-    source_image = "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-9-stretch-v20220621"
-    type         = "PERSISTENT"
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-9"
+    }
   }
 
   network_interface {
     network = "default"
-  }
 
-  scheduling {
-    automatic_restart = true
-    preemptible       = false
+    access_config {
+    }
   }
-
   service_account {
     scopes = [
       "https://www.googleapis.com/auth/cloud-platform",
@@ -122,6 +116,7 @@ resource "google_compute_target_pool" "default" {
   name             = "basic-load-balancer-default"
   region           = "us-central1"
   session_affinity = "NONE"
+  instances        = [google_compute_instance.default.self_link]
 
   health_checks = var.disable_health_check ? [] : [google_compute_http_health_check.default.0.self_link]
 }
@@ -141,35 +136,18 @@ resource "google_compute_http_health_check" "default" {
   host         = var.health_check["host"]
 }
 
-resource "google_compute_region_instance_group_manager" "mig" {
-  base_instance_name = "mig-simple"
-  project            = "gcp-terraform-env"
-  target_pools       = [google_compute_target_pool.default.id]
-  distribution_policy_zones = [
-    "us-central1-a",
-    "us-central1-b",
-    "us-central1-c",
-    "us-central1-f",
+resource "google_compute_instance_group" "webservers" {
+  name        = "terraform-webservers"
+  description = "Terraform test instance group"
+  zone        = "us-central1-a"
+  project     = "gcp-terraform-env"
+
+  instances = [
+    google_compute_instance.default.id,
   ]
-  name                      = "mig-simple-mig"
-  region                    = "us-central1"
-  target_size               = 2
-  wait_for_instances        = false
-  wait_for_instances_status = "STABLE"
 
   named_port {
     name = "http"
-    port = 80
-  }
-
-  timeouts {
-    create = "5m"
-    delete = "15m"
-    update = "5m"
-  }
-
-  version {
-    name              = "mig-simple-mig-version-0"
-    instance_template = google_compute_instance_template.tpl.id
+    port = "80"
   }
 }
