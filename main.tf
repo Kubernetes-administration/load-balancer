@@ -12,7 +12,7 @@ resource "google_compute_instance_group" "instance_group" {
   ]
 
   named_port {
-    name = var.port_name
+    name = lower(var.protocol)
     port = var.service_port
   }
 }
@@ -48,7 +48,7 @@ resource "google_compute_url_map" "default" {
 resource "google_compute_backend_service" "backend_service" {
   name                  = "${var.project}-backend-service"
   protocol              = var.protocol
-  port_name             = var.port_name
+  port_name             = lower(var.protocol)
   load_balancing_scheme = var.load_balancing_scheme
   enable_cdn            = var.enable_cdn
   project               = var.project

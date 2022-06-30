@@ -82,11 +82,6 @@ variable "allowed_ips" {
   description = "value"
 }
 
-variable "port_range" {
-  type        = string
-  description = "value"
-}
-
 variable "protocol" {
   type        = string
   description = "value"
@@ -103,17 +98,7 @@ variable "labels" {
   type        = map(string)
 }
 
-variable "ip_address" {
-  description = "IP address of the external load balancer, if empty one will be assigned."
-  default     = null
-}
-
 variable "compute_instance" {
   type        = string
   description = "Exiting instance"
-}
-
-variable "port_name" {
-  type        = string
-  description = "value"
 }
