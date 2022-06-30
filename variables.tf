@@ -47,22 +47,7 @@ variable "zone" {
   description = "zone"
 }
 
-variable "ports" {
-  type        = list(any)
-  description = "value"
-}
-
-variable "source_ranges" {
-  type        = list(any)
-  description = "value"
-}
-
 variable "network" {
-  type        = string
-  description = "value"
-}
-
-variable "protocol" {
   type        = string
   description = "value"
 }
@@ -92,11 +77,6 @@ variable "target_tags" {
   description = "value"
 }
 
-variable "http_named_port" {
-  type        = string
-  description = "value"
-}
-
 variable "allowed_ips" {
   type        = list(any)
   description = "value"
@@ -107,7 +87,7 @@ variable "port_range" {
   description = "value"
 }
 
-variable "backend_service_protocol" {
+variable "protocol" {
   type        = string
   description = "value"
 }

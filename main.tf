@@ -12,7 +12,7 @@ resource "google_compute_instance_group" "instance_group" {
   ]
 
   named_port {
-    name = var.http_named_port
+    name = var.port_name
     port = var.service_port
   }
 }
@@ -28,7 +28,7 @@ resource "google_compute_global_forwarding_rule" "global_forwarding_rule" {
   name        = "${var.project}-forwarding-rule"
   project     = var.project
   ip_protocol = var.ip_protocol
-  port_range  = var.port_range
+  port_range  = var.service_port
   target      = google_compute_target_http_proxy.target_http_proxy.id
   labels      = var.labels
 }
@@ -46,8 +46,8 @@ resource "google_compute_url_map" "default" {
 }
 
 resource "google_compute_backend_service" "backend_service" {
-  name     = "${var.project}-backend-service"
-  protocol = var.backend_service_protocol
+  name                  = "${var.project}-backend-service"
+  protocol              = var.protocol
   port_name             = var.port_name
   load_balancing_scheme = var.load_balancing_scheme
   enable_cdn            = var.enable_cdn
