@@ -1,5 +1,5 @@
 data "template_file" "instance_startup_script" {
-  template = file("${path.module}/templates/gceme.sh.tpl")
+  template = file("${path.module}/templates/hello.sh.tpl")
 
   vars = {
     PROXY_PATH = ""

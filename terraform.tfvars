@@ -13,4 +13,5 @@ target_tags           = ["configured-http-server"]
 allowed_ips = [
   "0.0.0.0/0",
 ]
-compute_instance = "default-instance"
+compute_instance     = "default-instance"
+disable_health_check = false

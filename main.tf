@@ -17,7 +17,6 @@ resource "google_compute_instance_group" "instance_group" {
   }
 }
 
-
 data "google_compute_instance" "compute_instance" {
   project = var.project
   name    = var.compute_instance

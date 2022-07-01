@@ -24,7 +24,6 @@ variable "health_check" {
 variable "disable_health_check" {
   type        = bool
   description = "Disables the health check on the target pool."
-  default     = false
 }
 
 variable "service_port" {
